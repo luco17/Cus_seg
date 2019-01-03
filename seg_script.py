@@ -1,7 +1,7 @@
 import pandas as pd, datetime as dt, matplotlib.pyplot as plt, seaborn as sns, numpy as np
 
 #Original code to read in file, sample it and write it
-df = pd.read_excel("Online Retail.xlsx")
+'df = pd.read_excel("Online Retail.xlsx")'
 'df.to_csv("sample_onret.csv")'
 
 df = pd.read_csv("sample_onret.csv")
@@ -81,7 +81,7 @@ plt.show()
 
 
 # Analyzing average Unit spend by cohort
-grouping = online.groupby(['CohortMonth_clean', 'CohortIndex_month'])
+grouping = df.groupby(['CohortMonth_clean', 'CohortIndex_month'])
 cohort_data = grouping['UnitPrice'].mean().reset_index()
 # Creating a pivot
 average_quantity = cohort_data.pivot(index = 'CohortMonth_clean', columns = 'CohortIndex_month', values = 'UnitPrice')
@@ -107,3 +107,13 @@ r_labels = list(range(4, 0, -1))
 recency_quartiles = pd.qcut(test_df['Recency_Days'], q = 4, labels = r_labels)
 test_df['Recency_Quartile'] = recency_quartiles
 print(test_df.sort_values('Recency_Days'))
+
+#Using a snapdate for the RFM
+df['TotalSum'] = df['UnitPrice'] * df['Quantity']
+
+snap = max(df.InvoiceDate) + dt.timedelta(days = 1)
+
+grouped_df = df.groupby(['CustomerID']).agg({
+    'InvoiceDate': lambda x: (snap - x.max()).days,
+    'InvoiceNo': 'count',
+    'TotalSum': 'sum'})
