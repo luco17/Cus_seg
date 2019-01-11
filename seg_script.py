@@ -78,8 +78,6 @@ plt.title('Cohort retention rate')
 sns.heatmap(retention, annot = True, cmap = 'BuGn', fmt = '.0%', vmin = 0.0, vmax = 0.5)
 plt.show()
 
-
-
 # Analyzing average Unit spend by cohort
 grouping = df.groupby(['CohortMonth_clean', 'CohortIndex_month'])
 cohort_data = grouping['UnitPrice'].mean().reset_index()
@@ -117,3 +115,43 @@ grouped_df = df.groupby(['CustomerID']).agg({
     'InvoiceDate': lambda x: (snap - x.max()).days,
     'InvoiceNo': 'count',
     'TotalSum': 'sum'})
+
+grouped_df.rename(columns = {'InvoiceDate': 'Recency',
+                             'InvoiceNo': 'Frequency',
+                             'TotalSum': 'MonetaryValue'}, inplace = True)
+
+###Building segments from the RFM analysis
+# Creating ascending and descending labels
+r_labels = range(3, 0, -1); f_labels = range(1, 4); m_labels = range(1, 4)
+r_groups = pd.qcut(grouped_df['Recency'], q = 3, labels = r_labels)
+f_groups = pd.qcut(grouped_df['Frequency'], q = 3, labels = f_labels)
+m_groups = pd.qcut(grouped_df['MonetaryValue'], q = 3, labels = m_labels)
+
+# Creating columns R, F and M
+grouped_df = grouped_df.assign(R = r_groups.values, F = f_groups.values, M = m_groups.values)
+
+# Calculate RFM_Score
+grouped_df['RFM_Score'] = grouped_df[['R','F','M']].sum(axis = 1)
+print(grouped_df['RFM_Score'].head())
+
+# Defining groups of customers
+def rfm_level(df):
+    if df['RFM_Score'] >= 9:
+        return 'Gold'
+    elif ((df['RFM_Score'] >= 6) and (df['RFM_Score'] < 9)):
+        return 'Silver'
+    else:
+        return 'Bronze'
+
+# Create the new variable
+grouped_df['RFM_Level'] = grouped_df.apply(rfm_level, axis=1)
+
+# Calculate average values for each customer level, and return a size of each segment
+rfm_level_agg = grouped_df.groupby('RFM_Level').agg({
+    'Recency': 'mean',
+    'Frequency': 'mean',
+    'MonetaryValue': ['mean', 'count']
+}).round(1)
+
+# Print the aggregated dataset
+print(rfm_level_agg)
