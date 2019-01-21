@@ -155,3 +155,21 @@ rfm_level_agg = grouped_df.groupby('RFM_Level').agg({
 
 # Print the aggregated dataset
 print(rfm_level_agg)
+
+###Analysing the RFM distribution
+RFM = grouped_df.loc[:,['Recency', 'Frequency', 'MonetaryValue']]
+
+#Broaldy the same mean and standard deviation, opening them up for K means clustering
+RFM.describe()
+RFM.mean()
+RFM.std()
+
+#Visual distribution analysis, none normally distributed, heavy skew
+plt.subplot(3, 1, 1); sns.distplot(RFM['Recency'])
+plt.subplot(3, 1, 2); sns.distplot(RFM['Frequency'])
+plt.subplot(3, 1, 3); sns.distplot(RFM['MonetaryValue'])
+plt.show()
+
+#Dealing with skewness
+np.log(RFM)
+RFM_log_trans = np.log(RFM).dropna()
