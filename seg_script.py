@@ -1,3 +1,4 @@
+
 import pandas as pd, datetime as dt, matplotlib.pyplot as plt, seaborn as sns, numpy as np
 
 #Original code to read in file, sample it and write it
@@ -67,7 +68,6 @@ cohort_data = grouping['CustomerID'].apply(pd.Series.nunique).reset_index()
 
 # Using a pivot to generate the table
 cohort_counts = cohort_data.pivot(index = 'CohortMonth_clean', columns = 'CohortIndex_month', values = 'CustomerID')
-
 # Taking the first column as initial size and calculating the % retention as months pass
 cohort_sizes = cohort_counts.iloc[:,0]
 retention = cohort_counts.divide(cohort_sizes, axis = 0)
@@ -100,6 +100,7 @@ spend_quartile = pd.qcut(test_df['Spend'], q = 4, labels = range(1, 5))
 test_df['Spend_Quartile'] = spend_quartile
 print(test_df.sort_values('Spend'))
 'Recency in descending order'
+
 # Store labels from 4 to 1 in a decreasing order
 r_labels = list(range(4, 0, -1))
 recency_quartiles = pd.qcut(test_df['Recency_Days'], q = 4, labels = r_labels)
@@ -155,3 +156,33 @@ rfm_level_agg = grouped_df.groupby('RFM_Level').agg({
 
 # Print the aggregated dataset
 print(rfm_level_agg)
+
+###Analysing the RFM distribution
+RFM = grouped_df.loc[:,['Recency', 'Frequency', 'MonetaryValue']]
+
+#Broaldy the same mean and standard deviation, opening them up for K means clustering
+RFM.describe()
+RFM.mean()
+RFM.std()
+
+#Visual distribution analysis, none normally distributed, heavy skew
+plt.subplot(3, 1, 1); sns.distplot(RFM['Recency'])
+plt.subplot(3, 1, 2); sns.distplot(RFM['Frequency'])
+plt.subplot(3, 1, 3); sns.distplot(RFM['MonetaryValue'])
+plt.show()
+
+#Editing data to remove outliers
+sns.distplot(RFM['Frequency'])
+sns.distplot(RFM['MonetaryValue'])
+
+RFM.nlargest(n = 10, columns = 'MonetaryValue')
+RFM.nlargest(n = 10, columns = 'Frequency')
+
+#Assessing cut off points at 10 sd from mean
+MV_cutoff = RFM['MonetaryValue'].mean() + RFM['MonetaryValue'].std() * 5
+FR_cutoff = RFM['Frequency'].mean() + RFM['Frequency'].std() * 5
+
+#Editing the data frame to be less than these points
+RFM_out_adj = RFM.loc[(RFM['MonetaryValue'] < MV_cutoff) & (RFM['Frequency'] < FR_cutoff)]
+
+sns.distplot(RFM_out_adj['MonetaryValue'])
