@@ -1,5 +1,6 @@
 import pandas as pd, datetime as dt, matplotlib.pyplot as plt, seaborn as sns, numpy as np
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 #Original code to read in file, sample it and write it
 'df = pd.read_excel("Online Retail.xlsx")'
 'df.to_csv("sample_onret.csv")'
@@ -170,6 +171,27 @@ plt.subplot(3, 1, 2); sns.distplot(RFM['Frequency'])
 plt.subplot(3, 1, 3); sns.distplot(RFM['MonetaryValue'])
 plt.show()
 
-#Dealing with skewness
-np.log(RFM)
-RFM_log_trans = np.log(RFM).dropna()
+#Dealing with skewness, removing negative values from MV
+RFM_log_trans = RFM.loc[(RFM['MonetaryValue'] > 0)]
+RFM_log_trans = np.log(RFM_log_trans)
+
+#Normalizing the data to get mean zero and std 1
+# Manual
+RFM_norm = (RFM - RFM.mean()) / RFM.std()
+print(RFM_norm.describe().round(2))
+
+#Runnign the same operation but using and SKlearn pipeline
+scaler = StandardScaler()
+scaler.fit(RFM_log_trans)
+RFM_norm = scaler.transform(RFM_log_trans)
+#Converting to a PD DF
+RFM_norm = pd.DataFrame(RFM_norm, index = RFM_log_trans.index, columns = RFM_log_trans.columns)
+RFM_norm.describe().round(2)
+
+#Plotting the new distribution
+plt.subplot(3, 1, 1); sns.distplot(RFM_norm['Recency'])
+plt.subplot(3, 1, 2); sns.distplot(RFM_norm['Frequency'])
+plt.subplot(3, 1, 3); sns.distplot(RFM_norm['MonetaryValue'])
+plt.show()
+
+#Running Kmeans with the normalized data
