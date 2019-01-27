@@ -9,9 +9,10 @@ df = pd.read_csv("sample_onret.csv")
 df = df.loc[:,'InvoiceNo':]
 df.dropna(inplace = True)
 
+
 #Extracting the date of a given transaction and finding earliest transaction date for a customer
-def get_day(x): return dt.datetime(x.year, x.month, x.day)
 df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+def get_day(x): return dt.datetime(x.year, x.month, x.day)
 df['InvoiceDay'] = df['InvoiceDate'].apply(get_day)
 
 #Grouping by customer ID to find earliest purchase date
@@ -30,6 +31,7 @@ invoice_year, invoice_month, invoice_day = get_date_int(df, 'InvoiceDay')
 cohort_year, cohort_month, cohort_day = get_date_int(df, 'CohortDay')
 
 #Creating a datediff index between cohort formation and last invoice
+#This calculates recency of users' last purchase
 years_diff = invoice_year - cohort_year
 months_diff = invoice_month - cohort_month
 days_diff = invoice_day - cohort_day
@@ -58,12 +60,12 @@ for i,j in zip(invoice_year, invoice_month):
 
 df['InvoiceMonth_clean'] = invoice_months_generated
 
-###Creating a retention table
+###Creating a retention table, changing CohortIndex from days since last purchase to months
 df['CohortIndex_month'] = round(df['CohortIndex']/30 + 1,0).astype('int64')
 
 grouping = df.groupby(['CohortMonth_clean', 'CohortIndex_month'])
 
-# Count the number of unique month, index combos per per customer ID
+# Count the number of unique month, index combos per customer ID
 cohort_data = grouping['CustomerID'].apply(pd.Series.nunique).reset_index()
 
 # Using a pivot to generate the table
@@ -82,6 +84,7 @@ plt.show()
 # Analyzing average Unit spend by cohort
 grouping = df.groupby(['CohortMonth_clean', 'CohortIndex_month'])
 cohort_data = grouping['UnitPrice'].mean().reset_index()
+
 # Creating a pivot
 average_quantity = cohort_data.pivot(index = 'CohortMonth_clean', columns = 'CohortIndex_month', values = 'UnitPrice')
 print(average_quantity.round(1))
@@ -180,9 +183,8 @@ RFM_log_trans = np.log(RFM_log_trans)
 RFM_norm = (RFM - RFM.mean()) / RFM.std()
 print(RFM_norm.describe().round(2))
 
-#Runnign the same operation but using and SKlearn pipeline
-scaler = StandardScaler()
-scaler.fit(RFM_log_trans)
+#Running the same operation but using an SKlearn pipeline
+scaler = StandardScaler() ;scaler.fit(RFM_log_trans)
 RFM_norm = scaler.transform(RFM_log_trans)
 #Converting to a PD DF
 RFM_norm = pd.DataFrame(RFM_norm, index = RFM_log_trans.index, columns = RFM_log_trans.columns)
@@ -195,3 +197,17 @@ plt.subplot(3, 1, 3); sns.distplot(RFM_norm['MonetaryValue'])
 plt.show()
 
 #Running Kmeans with the normalized data
+sse = {}
+# Fitting KMeans and calculate SSE for each k between 1 and 10
+for k in range(1, 11):
+
+    # Initialize KMeans with k clusters and fit it
+    kmeans = KMeans(n_clusters = k, random_state = 1).fit(RFM_norm)
+
+    # Assign sum of squared distances to k element of the sse dictionary
+    sse[k] = kmeans.inertia_
+
+# Creating an elbow plot to evaluate cluster numbers
+plt.title('The Elbow Method'); plt.xlabel('k'); plt.ylabel('SSE')
+sns.pointplot(x = list(sse.keys()), y=list(sse.values()))
+plt.show()
