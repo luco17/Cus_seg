@@ -175,8 +175,8 @@ plt.subplot(3, 1, 3); sns.distplot(RFM['MonetaryValue'])
 plt.show()
 
 #Dealing with skewness, removing negative values from MV
-RFM_log_trans = RFM.loc[(RFM['MonetaryValue'] > 0)]
-RFM_log_trans = np.log(RFM_log_trans)
+RFM_2 = RFM.loc[(RFM['MonetaryValue'] > 0)]
+RFM_log_trans = np.log(RFM_2)
 
 #Normalizing the data to get mean zero and std 1
 # Manual
@@ -211,3 +211,18 @@ for k in range(1, 11):
 plt.title('The Elbow Method'); plt.xlabel('k'); plt.ylabel('SSE')
 sns.pointplot(x = list(sse.keys()), y=list(sse.values()))
 plt.show()
+
+#Running 3 clusters
+kmeans = KMeans(n_clusters = 3, random_state = 1)
+kmeans.fit(RFM_norm)
+# Extract cluster labels
+cluster_labels = kmeans.labels_
+
+# Adding cluster labels
+RFM_C = RFM_2.assign(Cluster = cluster_labels)
+grouped = RFM_C.groupby(['Cluster'])
+grouped.agg({
+    'Recency': 'mean',
+    'Frequency': 'mean',
+    'MonetaryValue': ['mean', 'count']
+  }).round(1)
